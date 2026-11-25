@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>雨课堂监测器 · 设置</title>
+<style>
+  :root { --bg:#0b1020; --card:#151c33; --line:#273251; --text:#e6edf7; --muted:#95a3c0; --accent:#5b8cff; --ok:#2ecc71; --bad:#ff5d5d; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
+  header { padding:18px 24px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  h1 { font-size:18px; margin:0; }
+  .wrap { max-width:1080px; margin:22px auto; padding:0 18px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; margin-bottom:16px; }
+  .full { grid-column:1/-1; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:8px 0; }
+  label { color:var(--muted); font-size:13px; }
+  input, select, textarea, button { font:inherit; }
+  input[type=text], input[type=number], input[type=password], select, textarea {
+    background:#0e1427; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px 10px;
+  }
+  input[type=text], input[type=number], input[type=password], select { min-width:120px; }
+  textarea { width:100%; min-height:70px; resize:vertical; }
+  button { border:1px solid var(--line); background:#1d2948; color:var(--text); border-radius:8px; padding:8px 13px; cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  button.danger { background:#5a1d1d; border-color:#8a3030; }
+  .badge { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:#0e1427; border:1px solid var(--line); font-size:12px; }
+  .dot { width:9px; height:9px; border-radius:50%; background:#6b7899; }
+  .dot.on { background:var(--ok); box-shadow:0 0 10px var(--ok); }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th,td { padding:8px 9px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+  th { color:var(--muted); font-weight:500; }
+  .ok { color:var(--ok); } .fail { color:var(--bad); }
+  .subtle { color:var(--muted); font-size:12px; }
+  .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-bottom:12px; }
+  .toolbar > div { display:flex; flex-direction:column; gap:3px; }
+  .hidden { display:none !important; }
+  @media(max-width:800px){ .grid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<header>
+  <h1>雨课堂监测器 <span class="subtle">· 设置控制台</span></h1>
+  <div class="row">
+    <span class="badge"><span id="statusDot" class="dot"></span><span id="statusText">加载中</span></span>
+    <button id="bigToggle" class="primary">启动</button>
+  </div>
+</header>
+<div class="wrap">
+<div class="grid">
+  <div class="card full">
+    <h3>运行状态</h3>
+    <div class="row" id="statsRow">
+      <span class="subtle">上次拉取 <b id="statPoll">-</b></span>
+      <span class="subtle">上次送达 <b id="statDeliver">-</b></span>
+      <span class="subtle">今日推送 <b id="statToday">-</b></span>
+      <span class="subtle">Token <b id="statToken">-</b></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>采集设置</h3>
+    <div class="row"><label>查询频率</label><input id="pollInterval" type="number" min="1" max="86400" step="1"> <label>秒</label></div>
+    <div class="row"><label>快捷</label><button data-interval="10">10s</button><button data-interval="30">30s</button><button data-interval="100">100s</button></div>
+    <h4>自定义时间窗口</h4>
+    <div id="windows"></div>
+    <div class="row">
+      <button id="addWindow">+ 添加区间</button>
+      <label>预设：</label><button data-preset="all">全天</button><button data-preset="day">白天</button><button data-preset="class">上课时段</button>
+    </div>
+    <h4>内容类型</h4>
+    <div class="row" id="types"></div>
+    <div class="row"><label>课程过滤（逗号分隔，留空=全部）</label></div>
+    <input id="courseFilter" type="text" style="width:100%" placeholder="如：高等数学,线性代数">
+  </div>
+
+  <div class="card">
+    <h3>通知设置</h3>
+    <div class="row"><label>勿扰模式</label><input id="dnd" type="checkbox"></div>
+    <div id="channels"></div>
+    <div class="row">
+      <select id="presetSelect"></select>
+      <button id="addChannel">+ 添加渠道</button>
+      <button id="testAll">测试所有启用渠道</button>
+    </div>
+    <div class="subtle">渠道配置以 JSON 编辑，保存后生效；每个渠道均可单独发送测试。</div>
+  </div>
+
+  <div class="card">
+    <h3>鉴权与接口</h3>
+    <div class="row"><label>Token</label><input id="token" type="password" style="width:60%"></div>
+    <div class="row"><label>Token 到期(Unix秒)</label><input id="tokenExpire" type="number" style="width:160px"></div>
+    <div class="row"><label>采集模式</label><select id="collectorMode"><option value="mock">Mock（体验用）</option><option value="http">HTTP（抓包后填）</option></select></div>
+    <div class="row"><label>Base URL</label><input id="baseUrl" type="text" style="width:65%"></div>
+    <div class="row"><label>请求头 JSON</label></div><textarea id="headers" placeholder='{"Cookie":"..."}'></textarea>
+    <div class="row"><label>接口路径 JSON</label></div><textarea id="endpoints" placeholder='{"homework":"/api/hw","exercise":"/api/ex","discussion":"/api/dis"}'></textarea>
+    <div class="row"><label>字段映射 JSON</label></div><textarea id="fieldMap" placeholder='{"id":"data.id","title":"data.title"}'></textarea>
+    <div class="row"><label>列表路径</label><input id="listPath" type="text" value="data.list"></div>
+  </div>
+
+  <div class="card">
+    <h3>运行日志</h3>
+    <div id="events" style="max-height:280px;overflow:auto;font-size:12px"></div>
+  </div>
+
+  <div class="card full">
+    <div class="row" style="justify-content:space-between">
+      <h3 style="margin:0">通知历史</h3>
+      <div class="toolbar">
+        <div><label>类型</label><select id="fType"><option value="">全部</option><option value="homework">作业</option><option value="exercise">习题</option><option value="discussion">讨论</option></select></div>
+        <div><label>状态</label><select id="fStatus"><option value="">全部</option><option value="ok">成功</option><option value="fail">失败</option></select></div>
+        <div><label>渠道</label><select id="fChannel"><option value="">全部</option><option value="email">邮箱</option><option value="dingtalk">钉钉</option><option value="telegram">Telegram</option><option value="webhook">Webhook</option></select></div>
+        <div><label>课程</label><input id="fCourse" type="text" placeholder="包含"></div>
+        <div><label>每页</label><input id="fLimit" type="number" value="50" min="10" max="500" style="width:80px"></div>
+        <button id="filterBtn">筛选</button>
+      </div>
+    </div>
+    <table><thead><tr><th>时间</th><th>类型</th><th>课程</th><th>标题</th><th>渠道</th><th>状态</th><th>错误</th></tr></thead><tbody id="histBody"></tbody></table>
+    <div class="row" style="justify-content:space-between"><button id="prevPage">上一页</button><span id="pageInfo" class="subtle"></span><button id="nextPage">下一页</button></div>
+  </div>
+
+  <div class="card full">
+    <div class="row" style="justify-content:space-between">
+      <span class="subtle">设置采用「草稿 → 保存并生效」两步，保存前不影响运行。</span>
+      <div><button id="resetDraft">重置草稿</button> <button id="saveApply" class="primary">保存并生效</button></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let D = null, offset = 0, limit = 50;
+const LABELS = {homework:'作业', exercise:'习题', discussion:'讨论'};
+const WEEK = ['一','二','三','四','五','六','日'];
+
+function jparse(s, fallback){ try { return JSON.parse(s || 'null') || fallback; } catch(e){ return fallback; } }
+function fmt(ts){ if(!ts) return '-'; const n=Number(ts); if(n>1e11) return new Date(n).toLocaleString(); return new Date(n*1000).toLocaleString(); }
+function qs(id){ const e=$(id); return e ? e.value.trim() : ''; }
+
+function renderWindows(ws){
+  $('windows').innerHTML = (ws||[]).map((w,i)=>{
+    const days = w.days || [0,1,2,3,4,5,6];
+    const checks = WEEK.map((d,idx)=>'<label><input type="checkbox" class="wday" data-i="'+i+'" value="'+idx+'" '+(days.includes(idx)?'checked':'')+'>'+d+'</label>').join('');
+    return '<div class="row" data-window="'+i+'"><input class="wstart" data-i="'+i+'" type="text" value="'+w.start+'" style="width:80px">'+
+      '—<input class="wend" data-i="'+i+'" type="text" value="'+w.end+'" style="width:80px">'+checks+
+      '<button class="delWin" data-i="'+i+'">删除</button></div>';
+  }).join('');
+  document.querySelectorAll('.delWin').forEach(b=>b.onclick=()=>{ D.time_windows.splice(Number(b.dataset.i),1); renderWindows(D.time_windows); });
+  document.querySelectorAll('.wstart,.wend,.wday').forEach(e=>e.onchange=collectWindows);
+}
+function collectWindows(){
+  const rows = document.querySelectorAll('[data-window]');
+  D.time_windows = Array.from(rows).map(row=>{
+    const i = row.dataset.window;
+    const days = Array.from(row.querySelectorAll('.wday:checked')).map(x=>Number(x.value));
+    return {start:row.querySelector('.wstart').value.trim(), end:row.querySelector('.wend').value.trim(), days};
+  });
+}
+function renderTypes(t){
+  $('types').innerHTML = Object.keys(LABELS).map(k=>'<label><input type="checkbox" class="ctype" value="'+k+'" '+(t[k]?'checked':'')+'>'+LABELS[k]+'</label>').join('');
+}
+function collectTypes(){ D.content_types={}; document.querySelectorAll('.ctype').forEach(x=>D.content_types[x.value]=x.checked); }
+function renderChannels(chs){
+  $('channels').innerHTML = (chs||[]).map((c,i)=>{
+    const cfg = JSON.stringify(c.config||{}, null, 2);
+    return '<div class="card" style="padding:12px;margin:10px 0" data-channel="'+i+'">'+
+      '<div class="row"><input class="cname" data-i="'+i+'" type="text" value="'+(c.name||'')+'" placeholder="渠道名称">'+
+      '<select class="ctypech" data-i="'+i+'">'+Object.keys(PRESETS).map(k=>'<option value="'+k+'" '+(c.preset===k?'selected':'')+'>'+PRESETS[k].label+'</option>').join('')+'</select>'+
+      '<label><input class="cenabled" data-i="'+i+'" type="checkbox" '+(c.enabled!==false?'checked':'')+'>启用</label>'+
+      '<button class="testCh" data-i="'+i+'">发送测试</button><button class="delCh danger" data-i="'+i+'">删除</button></div>'+
+      '<textarea class="cconfig" data-i="'+i+'">'+cfg+'</textarea></div>';
+  }).join('');
+  document.querySelectorAll('.delCh').forEach(b=>b.onclick=()=>{ D.channels.splice(Number(b.dataset.i),1); renderChannels(D.channels); });
+  document.querySelectorAll('.testCh').forEach(b=>b.onclick=()=>testChannel(Number(b.dataset.i)));
+  document.querySelectorAll('.cname,.ctypech,.cenabled,.cconfig').forEach(e=>e.onchange=collectChannels);
+}
+function collectChannels(){
+  const rows = document.querySelectorAll('[data-channel]');
+  D.channels = Array.from(rows).map(row=>{
+    const i = row.dataset.channel;
+    const preset = row.querySelector('.ctypech').value;
+    return {name:row.querySelector('.cname').value.trim(), preset, type:PRESETS[preset].type,
+      enabled:row.querySelector('.cenabled').checked, config:jparse(row.querySelector('.cconfig').value, PRESETS[preset].config)};
+  });
+}
+function collectAll(){
+  collectWindows(); collectTypes(); collectChannels();
+  D.poll_interval = Math.max(1, Number($('pollInterval').value)||30);
+  D.dnd = $('dnd').checked;
+  D.token = $('token').value.trim();
+  D.token_expire_at = Number($('tokenExpire').value)||0;
+  D.course_filter = qs('courseFilter').split(',').map(s=>s.trim()).filter(Boolean);
+  const c = D.collector = D.collector || {};
+  c.mode = $('collectorMode').value; c.base_url = qs('baseUrl');
+  c.headers = jparse($('headers').value, {}); c.endpoints = jparse($('endpoints').value, {});
+  c.field_map = jparse($('fieldMap').value, c.field_map||{}); c.list_path = qs('listPath')||'data.list';
+}
+function renderAll(d){
+  D = JSON.parse(JSON.stringify(d));
+  $('pollInterval').value = D.poll_interval||30;
+  $('dnd').checked = !!D.dnd;
+  $('token').value = D.token||''; $('tokenExpire').value = D.token_expire_at||0;
+  $('courseFilter').value = (D.course_filter||[]).join(',');
+  const c = D.collector||{};
+  $('collectorMode').value = c.mode||'mock'; $('baseUrl').value = c.base_url||'';
+  $('headers').value = JSON.stringify(c.headers||{}, null, 2);
+  $('endpoints').value = JSON.stringify(c.endpoints||{}, null, 2);
+  $('fieldMap').value = JSON.stringify(c.field_map||{}, null, 2);
+  $('listPath').value = c.list_path||'data.list';
+  renderWindows(D.time_windows); renderTypes(D.content_types||{}); renderChannels(D.channels);
+}
+let PRESETS = {};
+async function api(url, opts){ const r = await fetch(url, opts); if(!r.ok) throw new Error(await r.text()); return r.json(); }
+async function loadSettings(){
+  const s = await api('/api/settings'); PRESETS = s.presets;
+  $('presetSelect').innerHTML = Object.keys(s.presets).map(k=>'<option value="'+k+'">'+s.presets[k].label+'</option>').join('');
+  renderAll(s.draft);
+}
+async function refreshStatus(){
+  const st = await api('/api/status');
+  $('statusText').textContent = st.watcher.running ? ('运行中 PID '+st.watcher.pid) : '已停止';
+  $('statusDot').className = 'dot' + (st.watcher.running?' on':'');
+  $('bigToggle').textContent = st.watcher.running ? '停止' : '启动';
+  $('statPoll').textContent = fmt(st.heartbeats.last_poll_at);
+  $('statDeliver').textContent = fmt(st.heartbeats.last_deliver_at);
+  $('statToday').textContent = st.counts_today.total;
+  $('statToken').textContent = st.token_expire_at ? (st.token_expire_at > Date.now()/1000 ? '有效' : '已过期') : '未设置';
+}
+async function loadNotifications(){
+  const p = new URLSearchParams({limit:$('fLimit').value||50, offset});
+  ['Type','Status','Channel','Course'].forEach(k=>{ const v=$('f'+k).value.trim(); if(v) p.append(k.toLowerCase(),v); });
+  const r = await api('/api/notifications?'+p.toString());
+  $('histBody').innerHTML = r.items.map(x=>'<tr><td>'+fmt(x.sent_at)+'</td><td>'+ (LABELS[x.type]||x.type) +'</td><td>'+x.course+'</td><td>'+x.title+'</td><td>'+x.channel+'</td><td class="'+(x.status==='ok'?'ok':'fail')+'">'+(x.status==='ok'?'成功':'失败')+'</td><td>'+(x.error||'')+'</td></tr>').join('') || '<tr><td colspan="7" class="subtle">暂无记录</td></tr>';
+  $('pageInfo').textContent = '共 '+r.total+' 条，第 '+(Math.floor(offset/Math.max(1,Number($('fLimit').value)))+1)+' 页';
+}
+async function loadEvents(){ const r=await api('/api/events?limit=200'); $('events').innerHTML=r.items.map(x=>'<div>'+fmt(x.ts)+' <span class="'+(x.level==='ERROR'?'fail':'subtle')+'">'+x.level+'</span> '+x.message+'</div>').join(''); }
+async function testChannel(i){ collectChannels(); const c=D.channels[i]; const r=await api('/api/channels/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channel:c,type:'homework'})}); alert(r.ok?'测试成功':'测试失败：'+r.error); }
+function bind(){
+  $('bigToggle').onclick=async()=>{ collectAll(); await api('/api/settings/applyWithDraft',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(D)}); const st=await api('/api/watcher/'+(document.getElementById('statusText').textContent.startsWith('运行')?'stop':'start'),{method:'POST'}); refreshStatus(); };
+  document.querySelectorAll('[data-interval]').forEach(b=>b.onclick=()=>{ $('pollInterval').value=b.dataset.interval; });
+  $('addWindow').onclick=()=>{ collectWindows(); D.time_windows.push({start:'08:00',end:'23:00',days:[0,1,2,3,4,5,6]}); renderWindows(D.time_windows); };
+  document.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>{
+    collectWindows();
+    const p=b.dataset.preset;
+    if(p==='all') D.time_windows=[{start:'00:00',end:'23:59',days:[0,1,2,3,4,5,6]}];
+    if(p==='day') D.time_windows=[{start:'08:00',end:'22:00',days:[0,1,2,3,4,5,6]}];
+    if(p==='class') D.time_windows=[{start:'08:00',end:'12:00',days:[0,1,2,3,4,5]},{start:'13:30',end:'22:00',days:[0,1,2,3,4,5]}];
+    renderWindows(D.time_windows);
+  });
+  $('addChannel').onclick=()=>{ collectChannels(); const k=$('presetSelect').value, p=PRESETS[k]; D.channels.push({name:p.label,preset:k,type:p.type,enabled:true,config:JSON.parse(JSON.stringify(p.config))}); renderChannels(D.channels); };
+  $('testAll').onclick=async()=>{ collectChannels(); for(let i=0;i<D.channels.length;i++){ if(D.channels[i].enabled) await testChannel(i); } };
+  $('resetDraft').onclick=async()=>{ const r=await api('/api/settings/reset',{method:'POST'}); renderAll(r.settings); };
+  $('saveApply').onclick=async()=>{ collectAll(); const r=await api('/api/settings/applyWithDraft',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(D)}); renderAll(r.settings); refreshStatus(); alert('已保存并生效'); };
+  $('filterBtn').onclick=()=>{ offset=0; loadNotifications(); };
+  $('prevPage').onclick=()=>{ offset=Math.max(0,offset-Number($('fLimit').value||50)); loadNotifications(); };
+  $('nextPage').onclick=()=>{ offset+=Number($('fLimit').value||50); loadNotifications(); };
+}
+async function saveDraftOnly(){ collectAll(); await api('/api/settings/draft',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(D)}); }
+(async function init(){ await loadSettings(); bind(); await refreshStatus(); await loadNotifications(); await loadEvents(); setInterval(refreshStatus,3000); setInterval(loadNotifications,10000); setInterval(loadEvents,15000); })();
+</script>
+</body>
+</html>

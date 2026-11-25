@@ -1,0 +1,22 @@
+# secrets & runtime data
+.env
+*.db
+*.db-shm
+*.db-wal
+*.log
+data/
+*.pid
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# os
+.DS_Store
+Thumbs.db
